@@ -12,10 +12,6 @@ The root of all kOS data types.
 Overview
 --------
 
-.. versionadded:: 0.19.0
-    This is a new feature of kOS v0.19.0.  Most of what is
-    documented on this page won't work on earlier versions.
-
 All types of data that a kOS program can access, either via a variable, or
 a suffix return value, or really just any expression's temporary result,
 are now directly or indirectly derived from this one base type called just
@@ -50,7 +46,7 @@ or ``42`` or ``"abc"``.  For example, you can do::
           - :struct:`String`
           - The string that gets shown on-screen when doing the PRINT command.
 
-        * - :attr:`HASSUFFIX(name)`
+        * - :meth:`HASSUFFIX(name)`
           - :struct:`Boolean`
           - Test whether or not this value has a suffix with the given name.
 
@@ -84,7 +80,7 @@ or ``42`` or ``"abc"``.  For example, you can do::
     This suffix universally lets you get that string version of any item,
     rather than showing it on the screen.
 
-.. attribute:: Structure:HASSUFFIX(name)
+.. method:: Structure:HASSUFFIX(name)
 
     :parameter name: :struct:`String` name of the suffix being tested for
     :type: :struct:`Boolean`
@@ -105,6 +101,11 @@ or ``42`` or ``"abc"``.  For example, you can do::
     case-insensitive way.  Kerboscript cannot distinguish ":AAA"
     and ":aaa" as being two different suffixes.  In kerboscript,
     they'd be the same suffix.
+
+    (Note that because a :struct:`Lexicon` can use a special
+    :ref:`Lexicon suffix syntax <lexicon_suffix>`, it will also
+    return true for suffix-usable keys when you call its
+    HASSUFFIX method.)
 
 .. attribute:: Structure:SUFFIXNAMES
 
@@ -145,6 +146,12 @@ or ``42`` or ``"abc"``.  For example, you can do::
         [11] = X
         [12] = Y
         [13] = Z
+
+    (Note that because a :struct:`Lexicon` can use a special
+    :ref:`Lexicon suffix syntax <lexicon_suffix>`, it will also
+    include all of its suffix-usable keys when you call its
+    SUFFIXNAMES method.)
+
 
 .. attribute:: Structure:TYPENAME
 

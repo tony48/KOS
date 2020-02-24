@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using kOS.Safe.Persistence;
 using UnityEngine;
+using UnityEngine.Networking;
 using kOS.Safe.Screen;
 using kOS.Module;
 using kOS.UserIO;
@@ -15,7 +16,7 @@ namespace kOS.Screen
     // Blockotronix 550 Computor Monitor
     public class TermWindow : KOSManagedWindow , ITermWindow
     {
-        private const string CONTROL_LOCKOUT = "kOSTerminal";
+        public const string CONTROL_LOCKOUT = "kOSTerminal";
 
         /// <summary>
         /// Set to true only when compiling a version specifically for the purpose
@@ -36,12 +37,10 @@ namespace kOS.Screen
         private const bool DebugInternational = false;
 
         private static string root;
-        private static readonly Color color = new Color(1, 1, 1, 1); // opaque window color when focused
-        private static readonly Color colorAlpha = new Color(1f, 1f, 1f, 0.8f); // slightly less opaque window color when not focused.
+        private static readonly Color color = new Color(1f, 1f, 1f, 1.1f); // opaque window color when focused
         private static readonly Color bgColor = new Color(0.0f, 0.0f, 0.0f, 1.0f); // black background of terminal
-        private static readonly Color textColor = new Color(0.4f, 1.0f, 0.2f, 1.0f); // font color on terminal
+        private static readonly Color textColor = new Color(0.5f, 1.0f, 0.5f, 1.0f); // font color on terminal
         private static readonly Color textColorOff = new Color(0.8f, 0.8f, 0.8f, 0.7f); // font color when power starved.
-        private static readonly Color textColorOffAlpha = new Color(0.8f, 0.8f, 0.8f, 0.8f); // font color when power starved and not focused.
         private Rect closeButtonRect;
         private Rect resizeButtonCoords;
         private GUIStyle tinyToggleStyle;
@@ -103,10 +102,9 @@ namespace kOS.Screen
         private Texture2D networkZigZagImage;
         private Texture2D brightnessButtonImage;
         private Texture2D fontHeightButtonImage;
-        private WWW beepURL;
         private AudioSource beepSource;
         private int guiTerminalBeepsPending;
-        
+
         private SharedObjects shared;
         private KOSTextEditPopup popupEditor;
 
@@ -145,24 +143,23 @@ namespace kOS.Screen
             closeButtonRect = new Rect(0, 0, 0, 0); // will be resized later.
             resizeButtonCoords = new Rect(0, 0, 0, 0); // will be resized later.
 
-            // Load dummy textures
-            terminalImage = new Texture2D(0, 0, TextureFormat.DXT1, false);
-            terminalFrameImage = new Texture2D(0, 0, TextureFormat.DXT1, false);
-            terminalFrameActiveImage = new Texture2D(0, 0, TextureFormat.DXT1, false);
-            resizeButtonImage = new Texture2D(0, 0, TextureFormat.DXT1, false);
-            networkZigZagImage = new Texture2D(0, 0, TextureFormat.DXT1, false);
-            brightnessButtonImage = new Texture2D(0, 0, TextureFormat.DXT1, false);
-            fontHeightButtonImage = new Texture2D(0, 0, TextureFormat.DXT1, false);
+            terminalImage = Utilities.Utils.GetTextureWithErrorMsg("kOS/GFX/dds_monitor_minimal", false);
+            terminalFrameImage = Utilities.Utils.GetTextureWithErrorMsg("kOS/GFX/dds_monitor_minimal_frame", false);
+            terminalFrameActiveImage = Utilities.Utils.GetTextureWithErrorMsg("kOS/GFX/dds_monitor_minimal_frame_active", false);
+            resizeButtonImage = Utilities.Utils.GetTextureWithErrorMsg("kOS/GFX/dds_resize-button", false);
+            networkZigZagImage = Utilities.Utils.GetTextureWithErrorMsg("kOS/GFX/dds_network-zigzag", false);
+            brightnessButtonImage = Utilities.Utils.GetTextureWithErrorMsg("kOS/GFX/dds_brightness-button", false);
+            fontHeightButtonImage = Utilities.Utils.GetTextureWithErrorMsg("kOS/GFX/dds_font-height-button", false);
 
-            root = KSPUtil.ApplicationRootPath.Replace("\\", "/");
-            LoadTexture("GameData/kOS/GFX/monitor_minimal.png", ref terminalImage);
-            LoadTexture("GameData/kOS/GFX/monitor_minimal_frame.png", ref terminalFrameImage);
-            LoadTexture("GameData/kOS/GFX/monitor_minimal_frame_active.png", ref terminalFrameActiveImage);
-            LoadTexture("GameData/kOS/GFX/resize-button.png", ref resizeButtonImage);
-            LoadTexture("GameData/kOS/GFX/network-zigzag.png", ref networkZigZagImage);
-            LoadTexture("GameData/kOS/GFX/brightness-button.png", ref brightnessButtonImage);
-            LoadTexture("GameData/kOS/GFX/font-height-button.png", ref fontHeightButtonImage);
-
+            allTexturesFound =
+                terminalImage != null &&
+                terminalFrameImage != null &&
+                terminalFrameActiveImage != null &&
+                resizeButtonImage != null &&
+                networkZigZagImage != null &&
+                brightnessButtonImage != null &&
+                fontHeightButtonImage != null;
+;
             terminalImageStyle = Create9SliceStyle(terminalImage);
             terminalFrameStyle = Create9SliceStyle(terminalFrameImage);
             terminalFrameActiveStyle = Create9SliceStyle(terminalFrameActiveImage);
@@ -211,7 +208,7 @@ namespace kOS.Screen
 
         public void OnDestroy()
         {
-            Unlock();
+            LoseFocus();
             GameEvents.onHideUI.Remove(OnHideUI);
             GameEvents.onShowUI.Remove(OnShowUI);
         }
@@ -220,27 +217,22 @@ namespace kOS.Screen
         {
             return soundMaker;
         }
-        
+
         private void LoadAudio()
         {
-            beepURL = new WWW("file://"+ root + "GameData/kOS/GFX/terminal-beep.wav");
+            // Deliberately not fixing the following deprecation warning for using WWW, because I want this
+            // codebase to be back-portable to older KSP versions for RO/RP-1 without too much hassle.  Eventually
+            // it might not work and we may be forced to change this, but the KSP1 lifecycle may be done
+            // by then, so I don't want to make the effort prematurely.  Fixing this requires a very ugly
+            // coroutine mess to load URLs the new way Unity wants you to do it.
+#pragma warning disable CS0618 // ^^^ see above comment about why this is disabled.
+            WWW beepURL = new WWW("file://" + root + "GameData/kOS/GFX/terminal-beep.wav");
+#pragma warning enable CS0618
             AudioClip beepClip = beepURL.GetAudioClip();
             beepSource = gameObject.AddComponent<AudioSource>();
             beepSource.clip = beepClip;
         }
 
-        public void LoadTexture(string relativePath, ref Texture2D targetTexture)
-        {
-            var imageLoader = new WWW("file://" + root + relativePath);
-            imageLoader.LoadImageIntoTexture(targetTexture);
-
-            if (imageLoader.isDone && imageLoader.bytesDownloaded == 0)
-            {
-                SafeHouse.Logger.LogError(string.Format("[TermWindow] Loading texture from \"{0}\" failed", relativePath));
-                allTexturesFound = false;
-            }
-        }
-        
         public void OpenPopupEditor(Volume v, GlobalPath path)
         {
             popupEditor.AttachTo(this, v, path);
@@ -259,11 +251,13 @@ namespace kOS.Screen
         
         public override void GetFocus()
         {
+            base.GetFocus();
             Lock();
         }
-        
+
         public override void LoseFocus()
         {
+            base.LoseFocus();
             Unlock();
         }
 
@@ -322,9 +316,7 @@ namespace kOS.Screen
             BringToFront();
 
 
-            // Exclude the TARGETING ControlType so that we can set the target vessel with the terminal open.
-            InputLockManager.SetControlLock(ControlTypes.All & ~ControlTypes.TARGETING, CONTROL_LOCKOUT);
-
+            InputLockManager.SetControlLock(ControlTypes.All, CONTROL_LOCKOUT);
             // Prevent editor keys from being pressed while typing
             EditorLogic editor = EditorLogic.fetch;
                 //TODO: POST 0.90 REVIEW
@@ -363,7 +355,7 @@ namespace kOS.Screen
 
             GUI.skin = HighLogic.Skin;
             
-            GUI.color = isLocked ? color : colorAlpha;
+            GUI.color = color;
 
             // Should probably make "gui screen name for my CPU part" into some sort of utility method:
             ChangeTitle(CalcualteTitle());
@@ -527,8 +519,10 @@ namespace kOS.Screen
                 
                 if (!IsSpecial(c)) // printable characters
                 {
+#pragma warning disable CS0162
                     if (DebugInternational)
                         c = DebugInternationalMapping(c);
+#pragma warning restore CS0162
                     ProcessOneInputChar(c, null);
                     consumeEvent = true;
                     cursorBlinkTime = 0.0f; // Don't blink while the user is still actively typing.
@@ -564,7 +558,7 @@ namespace kOS.Screen
 
         private static bool IsSpecial(char c)
         {
-            if (c < 0x0020)
+            if (c < 0x0020 || c > 0xE000)
                 return true;
             if (Enum.IsDefined(typeof(UnicodeCommand), (int)c))
                 return true;
@@ -815,8 +809,17 @@ namespace kOS.Screen
         {
             if (!allTexturesFound)
             {
-                GUI.Label(new Rect(15, 15, 450, 300), "Error: Some or all kOS textures were not found. Please " +
-                           "go to the following folder: \n\n<Your KSP Folder>\\GameData\\kOS\\GFX\\ \n\nand ensure that the png texture files are there.");
+                GUI.Label(new Rect(15, 15, 450, 300),
+                    "Error: Some or all kOS textures were not found.\n" +
+                    "Please go to the following folder: \n\n" +
+                    "<Your KSP Folder>\\GameData\\kOS\\GFX\\ \n\n" +
+                    "and ensure that the dds texture files are there.\n" +
+                    "Check the game log to see error messages \n" +
+                    "starting with \"kOS:\" that talk about Texture files." +
+                    "\n" +
+                    "If you see this message, it probably means that\n" +
+                    "kOS isn't installed correctly and you should try\n" +
+                    "installing it again.");
 
                 closeButtonRect = new Rect(WindowRect.width - 75, WindowRect.height - 30, 50, 25);
                 if (GUI.Button(closeButtonRect, "Close"))
@@ -833,9 +836,9 @@ namespace kOS.Screen
             }
             IScreenBuffer screen = shared.Screen;
             
-            GUI.color = isLocked ? color : colorAlpha;
-
             GUI.Label(new Rect(15, 20, WindowRect.width-30, WindowRect.height-55), "", terminalImageStyle);
+            GUI.color = color;
+
             if (telnets.Count > 0)
                 DrawTelnetStatus();
 
@@ -923,7 +926,7 @@ namespace kOS.Screen
                 // Sometimes the buffer is shorter than the terminal height if the resize JUST happened in the last Update():
                 int rowsToPaint = Math.Min(screen.RowCount, buffer.Count);
 
-                for (int row = 0; row < rowsToPaint; row++)
+                for (int row = 0; row < rowsToPaint; ++row)
                 {
                     // At first the screen is filled with null chars.  So if you do something like
                     // PRINT "AAA" AT (4,0) you can get a row of the screen like so "\0\0\0\0AAA".
@@ -936,15 +939,25 @@ namespace kOS.Screen
                     GUI.Label(new Rect(0, (row * charHeight), WindowRect.width - 10, charHeight), lineString, terminalLetterSkin.label);
                 }
 
-                bool blinkOn = cursorBlinkTime < 0.5f &&
-                               screen.CursorRowShow < screen.RowCount &&
-                               IsPowered &&
-                               ShowCursor;
+                int cursorRow = screen.CursorRowShow;
+                int cursorCol = screen.CursorColumnShow;
 
-                if (blinkOn)
+                bool drawCursorThisTime =
+                    // Only if the cursor is in the "on" phase of its blink right now:
+                    cursorBlinkTime < 0.5f &&
+                    // Only if the cursor is within terminal bounds, to avoid throwing array bounds exceptions.
+                    // (Cursor can be temporarily out of bounds if the up-arrow recalled a long cmdline, or if
+                    // the terminal just got resized.)
+                    cursorRow < screen.RowCount && cursorRow < buffer.Count &&  cursorCol < buffer[cursorRow].Length &&
+                    // Only when the CPU has power
+                    IsPowered &&
+                    // Only when expecting input
+                    ShowCursor;
+
+                if (drawCursorThisTime)
                 {
-                    char ch = buffer[screen.CursorRowShow][screen.CursorColumnShow];
-                    DrawCursorAt(ch, screen.CursorColumnShow, screen.CursorRowShow, reversingScreen,
+                    char ch = buffer[cursorRow][cursorCol];
+                    DrawCursorAt(ch, cursorCol, cursorRow, reversingScreen,
                                          charWidth, charHeight, screen.Brightness);
                 }
             }
@@ -1054,6 +1067,7 @@ namespace kOS.Screen
             shared.Screen.Brightness = SafeHouse.Config.TerminalBrightness;
             formerCharPixelWidth = shared.Screen.CharacterPixelWidth;
             formerCharPixelHeight = shared.Screen.CharacterPixelHeight;
+            shared.Screen.SetSize(SafeHouse.Config.TerminalDefaultHeight, SafeHouse.Config.TerminalDefaultWidth);
 
             NotifyOfScreenResize(shared.Screen);
             shared.Screen.AddResizeNotifier(NotifyOfScreenResize);

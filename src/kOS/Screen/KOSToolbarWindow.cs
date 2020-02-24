@@ -1,4 +1,4 @@
-﻿using kOS.Module;
+using kOS.Module;
 using kOS.Safe.Encapsulation.Suffixes;
 using kOS.Safe.Module;
 using kOS.Safe.Utilities;
@@ -55,6 +55,7 @@ namespace kOS.Screen
         private static GUIStyle vesselNameStyle;
         private static GUIStyle partNameStyle;
         private static GUIStyle tooltipLabelStyle;
+        private static GUIStyle smallLabelStyle;
         private static GUIStyle boxDisabledStyle;
         private static GUIStyle boxOffStyle;
         private static GUIStyle boxOnStyle;
@@ -77,6 +78,7 @@ namespace kOS.Screen
         private bool alreadyAwake;
         private bool firstTime = true;
         private bool isOpen;
+        private bool wasOpenLastPaint;
         private kOS.Screen.ListPickerDialog fontPicker;
         private kOS.Screen.ListPickerDialog ipAddrPicker;
 
@@ -92,11 +94,11 @@ namespace kOS.Screen
         /// </summary>
         public static void FirstTimeSetup()
         {
-            launcherButtonTexture = GameDatabase.Instance.GetTexture("kOS/GFX/launcher-button", false);
-            terminalOpenIconTexture = GameDatabase.Instance.GetTexture("kOS/GFX/terminal-icon-open", false);
-            terminalClosedIconTexture = GameDatabase.Instance.GetTexture("kOS/GFX/terminal-icon-closed", false);
-            terminalOpenTelnetIconTexture = GameDatabase.Instance.GetTexture("kOS/GFX/terminal-icon-open-telnet", false);
-            terminalClosedTelnetIconTexture = GameDatabase.Instance.GetTexture("kOS/GFX/terminal-icon-closed-telnet", false);
+            launcherButtonTexture = Utilities.Utils.GetTextureWithErrorMsg("kOS/GFX/dds_launcher-button", false);
+            terminalOpenIconTexture = Utilities.Utils.GetTextureWithErrorMsg("kOS/GFX/dds_terminal-icon-open", false);
+            terminalClosedIconTexture = Utilities.Utils.GetTextureWithErrorMsg("kOS/GFX/dds_terminal-icon-closed", false);
+            terminalOpenTelnetIconTexture = Utilities.Utils.GetTextureWithErrorMsg("kOS/GFX/dds_terminal-icon-open-telnet", false);
+            terminalClosedTelnetIconTexture = Utilities.Utils.GetTextureWithErrorMsg("kOS/GFX/dds_terminal-icon-closed-telnet", false);
 
             windowRect = new Rect(0, 0, 1f, 1f); // this origin point will move when opened/closed.
             panelSkin = BuildPanelSkin();
@@ -189,7 +191,7 @@ namespace kOS.Screen
             if (!ToolbarManager.ToolbarAvailable) return;
 
             blizzyButton = ToolbarManager.Instance.add("kOS", "kOSButton");
-            blizzyButton.TexturePath = "kOS/GFX/launcher-button-blizzy";
+            blizzyButton.TexturePath = "kOS/GFX/dds_launcher-button-blizzy";
             blizzyButton.ToolTip = "kOS";
             blizzyButton.OnClick += e => CallbackOnClickBlizzy();
         }
@@ -426,7 +428,16 @@ namespace kOS.Screen
             horizontalSectionCount = 0;
             verticalSectionCount = 0;
 
-            if (!isOpen) return;
+            if (!isOpen)
+            {
+                wasOpenLastPaint = false;
+                return;
+            }
+
+            // Sorting the list is expensive.  Only do it when the window is first re-opened, not on every single repaint:
+            if (!wasOpenLastPaint)
+                kOSProcessor.SortAllInstances();
+            wasOpenLastPaint = true;
 
             if (uiGloballyHidden && kOS.Safe.Utilities.SafeHouse.Config.ObeyHideUI) return;
 
@@ -447,9 +458,9 @@ namespace kOS.Screen
 
             CountBeginVertical("", 150);
             GUILayout.Label("CONFIG VALUES", headingLabelStyle);
-            GUILayout.Label("To access other settings, see the kOS section in KSP's difficulty settings.", tooltipLabelStyle);
+            GUILayout.Label("To access other settings, see the kOS section in KSP's difficulty settings.", smallLabelStyle);
             GUILayout.Label("Global VALUES", headingLabelStyle);
-            GUILayout.Label("Changes to these settings are saved and globally affect all saved games.", tooltipLabelStyle);
+            GUILayout.Label("Changes to these settings are saved and globally affect all saved games.", smallLabelStyle);
 
             int whichInt = 0; // increments only when an integer field is encountered in the config keys, else stays put.
 
@@ -619,7 +630,7 @@ namespace kOS.Screen
             string fieldValue = (backInt == 0) ? "" : backInt.ToString(); // this lets the user temporarily delete the whole value instead of having it become a zero.
 
             GUI.SetNextControlName(fieldName);
-            fieldValue = GUILayout.TextField(fieldValue, 6, panelSkin.textField, GUILayout.MinWidth(60));
+            fieldValue = GUILayout.TextField(fieldValue, 4, panelSkin.textField, GUILayout.MinWidth(60));
 
             fieldValue = fieldValue.Trim(' ');
             int newInt = -99; // Nonzero value to act as a flag to detect if the following line got triggered:
@@ -913,7 +924,15 @@ namespace kOS.Screen
             {
                 fontSize = 11,
                 padding = new RectOffset(0, 2, 0, 2),
-                normal = { textColor = Color.white }
+                normal = { textColor = Color.white },
+                wordWrap = false
+            };
+            smallLabelStyle = new GUIStyle(theSkin.label)
+            {
+                fontSize = 11,
+                padding = new RectOffset(0, 2, 0, 2),
+                normal = { textColor = Color.white },
+                wordWrap = true
             };
             partNameStyle = new GUIStyle(theSkin.box)
             {

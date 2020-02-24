@@ -1,4 +1,4 @@
-﻿using kOS.Safe.Binding;
+using kOS.Safe.Binding;
 using kOS.Safe.Callback;
 using kOS.Safe.Compilation;
 using kOS.Safe.Encapsulation;
@@ -210,6 +210,7 @@ namespace kOS.Safe.Execution
                 // remove the last context
                 ProgramContext contextRemove = contexts.Last();
                 NotifyPopContextNotifyees(contextRemove);
+                contextRemove.ClearTriggers();
                 contexts.Remove(contextRemove);
                 shared.GameEventDispatchManager.RemoveDispatcherFor(currentContext);
                 contextRemove.DisableActiveFlyByWire(shared.BindingMgr);
@@ -321,6 +322,31 @@ namespace kOS.Safe.Execution
             }
 
             return returnVal;
+        }
+
+        /// <summary>
+        /// Find the closest-to-top subroutine context and return its
+        /// CameFromPriority.  Returns current priority if not in a subroutine.
+        /// </summary>
+        /// <returns></returns>
+        private InterruptPriority CurrentCameFromPriority()
+        {
+            bool done = false;
+            for (int depth = 0; !done; ++depth)
+            {
+                object stackItem = stack.PeekScope(depth);
+                if (stackItem == null)
+                {
+                    done = true;
+                }
+                else
+                {
+                    SubroutineContext context = stackItem as SubroutineContext;
+                    if (context != null)
+                        return context.CameFromPriority;
+                }
+            }
+            return CurrentPriority; // fallback if none found.
         }
 
         private void PopFirstContext()
@@ -435,19 +461,14 @@ namespace kOS.Safe.Execution
             {
                 if (globalVariables.Contains(item.Key))
                 {
-                    // if the pointer exists it means it was redefined from inside a program
-                    // and it's going to be invalid outside of it, so we remove it
+                    // If the pointer exists it means it was redefined from inside a program
+                    // and it's going to be invalid outside of it, so just to be sure, remove
+                    // it entirely in preparation for restoring the old one:
                     globalVariables.Remove(item.Key);
                     deletedPointers++;
-                    // also remove the corresponding trigger if exists
-                    if (item.Value.Value is int)
-                        RemoveTrigger((int)item.Value.Value, 0);
                 }
-                else
-                {
-                    globalVariables.Add(item.Key, item.Value);
-                    restoredPointers++;
-                }
+                globalVariables.Add(item.Key, item.Value);
+                restoredPointers++;
             }
 
             SafeHouse.Logger.Log(string.Format("Deleting {0} pointers and restoring {1} pointers", deletedPointers, restoredPointers));
@@ -469,7 +490,13 @@ namespace kOS.Safe.Execution
         public void BreakExecution(bool manual)
         {
             SafeHouse.Logger.Log(string.Format("Breaking Execution {0} Contexts: {1}", manual ? "Manually" : "Automatically", contexts.Count));
-            if (contexts.Count > 1)
+            if (contexts.Count == 0)
+            {
+                // Skip most of what this method does, since there's no execution to break.
+                // This case should only be posisble if BreakExecution() is called while the
+                // CPU is off or power starved, as can happen during OnLoad().
+            }
+            else if (contexts.Count > 1)
             {
                 AbortAllYields();
 
@@ -495,13 +522,15 @@ namespace kOS.Safe.Execution
                         stack.Clear();
                     }
                 }
+                CurrentPriority = InterruptPriority.Normal;
             }
             else
             {
-                currentContext.ClearTriggers();   // remove all the triggers
+                if (manual)
+                    currentContext.ClearTriggers(); // Removes the interpreter's triggers on Control-C and the like, but not on errors.
                 SkipCurrentInstructionId();
+                CurrentPriority = InterruptPriority.Normal;
             }
-            CurrentPriority = InterruptPriority.Normal;
             ResetStatistics();
         }
 
@@ -595,6 +624,20 @@ namespace kOS.Safe.Execution
 
                 throw new KOSInvalidDelegateContextException(currentContextName, delegateContextName);
            }
+        }
+
+        /// <summary>
+        /// Allow kOS code to lower the CPU priority (only the CPU is allowed to raise
+        /// it via its interrupts system, but code is allowed to lower it if it wants).
+        /// The new priority will be equal to whatever the priority was of the code
+        /// that got interrupted to get here.  (If priority 10 code gets interrupted
+        /// by priority 20 code, and that priority 20 code calls PrevPriority(), then
+        /// it will drop to priority 10 because that was the priority of whomever got
+        /// interrupted to get here.)
+        /// </summary>
+        public void DropBackPriority()
+        {
+            CurrentPriority = CurrentCameFromPriority();
         }
 
         /// <summary>
@@ -788,7 +831,7 @@ namespace kOS.Safe.Execution
         public void RemoveVariable(string identifier)
         {
             VariableScope currentScope = GetCurrentScope();
-            Variable variable = currentScope.RemoveNested(identifier);
+            Variable variable = currentScope.RemoveNestedUserVar(identifier);
             if (variable != null)
             {
                 // Tell Variable to orphan its old value now.  Faster than relying
@@ -1325,6 +1368,12 @@ namespace kOS.Safe.Execution
                     // interpreter context
                     SkipCurrentInstructionId();
                     stack.Clear(); // Get rid of this interpreter command's cruft.
+
+                    // If it threw exception during a trigger with higher priority (like lock steering) before
+                    // reaching its OpcodeReturn, it's important to drop the interpreter context's priority
+                    // back down so interrupts will work correctly again.  Unlike with a *Program*, with the
+                    // interpreter we're re-using the same programcontext after the crash:
+                    CurrentPriority = InterruptPriority.Normal;
                 }
                 else
                 {
@@ -1370,7 +1419,7 @@ namespace kOS.Safe.Execution
             for (int index = 0 ; index < currentContext.ActiveTriggerCount() ; ++index)
             {
                 TriggerInfo trigger = currentContext.GetTriggerByIndex(index);
-                
+
                 // If the program is ended from within a trigger, the trigger list will be empty and the pointer
                 // will be invalid.  Only execute the trigger if it still exists, AND if it's of a higher priority
                 // than the current CPU priority level.  (If it's the same or less priority as the curent CPU priority,
@@ -1436,10 +1485,8 @@ namespace kOS.Safe.Execution
         {
             var executeNext = true;
             int howManyNormalPriority = 0;
-            bool okayToActivatePendingTriggers = false;
 
             executeLog.Remove(0, executeLog.Length); // In .net 2.0, StringBuilder had no Clear(), which is what this is simulating.
-            SafeHouse.Logger.Log("eraseme: ContinueExecution before While loop.");
             while (InstructionsThisUpdate < instructionsPerUpdate &&
                    executeNext &&
                    currentContext != null)
@@ -1448,16 +1495,6 @@ namespace kOS.Safe.Execution
                 // cause callbacks to be invoked, and this can make those callback invocations
                 // happen immediately on the next opcode:
                 ProcessTriggers();
-
-                // It is not okay to re-activate pending triggers till all existing active triggers
-                // of Recurring priority have been flushed out and executed:
-                if ((! okayToActivatePendingTriggers) &&
-                    (! stack.HasDelayingTriggerContexts()) &&
-                    ! currentContext.HasActiveTriggersAtLeastPriority(InterruptPriority.Recurring))
-                {
-                    okayToActivatePendingTriggers = true;
-                    SafeHouse.Logger.Log("eraseme: okayToActivatePendingTriggers just became true.");
-                }
 
                 if (IsYielding())
                 {
@@ -1478,15 +1515,7 @@ namespace kOS.Safe.Execution
             // priority with a trigger.
             ProcessTriggers();
 
-            // As long as all there are no more of the "pending" kinds of trigger
-            // on the callstack and we have reached at least one opcode of mainline
-            // code or of immediate trigger code, then it's okay to activate the
-            // pending triggers now:
-            if (okayToActivatePendingTriggers)
-            {
-                currentContext.ActivatePendingTriggers();
-                SafeHouse.Logger.Log("eraseme: ActivatedPendingTriggers.");
-            }
+            currentContext.ActivatePendingTriggersAbovePriority(CurrentPriority);
 
             if (executeLog.Length > 0)
                 SafeHouse.Logger.Log(executeLog.ToString());

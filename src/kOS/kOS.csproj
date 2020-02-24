@@ -8,8 +8,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>kOS</RootNamespace>
     <AssemblyName>kOS</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -19,6 +20,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -29,8 +31,11 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
+    </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>..\..\Resources\Assembly-CSharp-firstpass.dll</HintPath>
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.SharpZipLib">
       <HintPath>..\..\Resources\GameData\kOS\Plugins\ICSharpCode.SharpZipLib.dll</HintPath>
@@ -41,14 +46,44 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="UnityEngine.UI">
-      <HintPath>..\..\Resources\UnityEngine.UI.dll</HintPath>
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
     </Reference>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\Resources\Assembly-CSharp.dll</HintPath>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>..\..\Resources\UnityEngine.dll</HintPath>
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestAudioModule">
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule">
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestWWWModule">
+      <HintPath>..\..\..\..\Desktop\KSP_ksrss_lite\KSP_x64_Data\Managed\UnityEngine.UnityWebRequestWWWModule.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -122,9 +157,13 @@
     <Compile Include="Sound\TriangleSoundWave.cs" />
     <Compile Include="Sound\Voice.cs" />
     <Compile Include="Sound\VoiceValue.cs" />
+    <Compile Include="Suffixed\BoundsValue.cs" />
+    <Compile Include="Suffixed\ConsumedResourceValue.cs" />
     <Compile Include="Suffixed\CraftTemplate.cs" />
     <Compile Include="Suffixed\KUniverseValue.cs" />
     <Compile Include="Suffixed\LoadDistanceValue.cs" />
+    <Compile Include="Suffixed\Part\DecouplerValue.cs" />
+    <Compile Include="Suffixed\Part\LaunchClampValue.cs" />
     <Compile Include="Suffixed\ResourceTransferValue.cs" />
     <Compile Include="Screen\DelegateDialog.cs" />
     <Compile Include="Screen\KOSManagedWindow.cs" />
@@ -140,7 +179,6 @@
     <Compile Include="Suffixed\PartModuleField\PartModuleFields.cs" />
     <Compile Include="Suffixed\PartModuleField\PartModuleFieldsFactory.cs" />
     <Compile Include="Suffixed\PartModuleField\GimbalFields.cs" />
-    <Compile Include="Suffixed\Part\ModuleEngineAdapter.cs" />
     <Compile Include="Suffixed\Part\PartValueFactory.cs" />
     <Compile Include="Suffixed\RgbaColor.cs" />
     <Compile Include="Suffixed\Config.cs" />
@@ -167,8 +205,11 @@
     <Compile Include="Suffixed\VectorRenderer.cs" />
     <Compile Include="Suffixed\VesselAlt.cs" />
     <Compile Include="Suffixed\VesselEta.cs" />
+    <Compile Include="Suffixed\VesselTarget.Hooks.cs" />
+    <Compile Include="Suffixed\VesselTarget.Parts.cs" />
     <Compile Include="Suffixed\WaypointValue.cs" />
     <Compile Include="Execution\TransferManager.cs" />
+    <Compile Include="Suffixed\Widget\TipDisplay.cs" />
     <Compile Include="Suffixed\Widget\Slider.cs" />
     <Compile Include="Suffixed\Widget\Spacing.cs" />
     <Compile Include="Suffixed\Widget\Label.cs" />
@@ -224,7 +265,6 @@
     <Compile Include="Communication\PermitAllConnectivityManager.cs" />
     <Compile Include="AddOns\RemoteTech\RemoteTechConnectivityManager.cs" />
     <Compile Include="Serialization\SerializationMgr.cs" />
-    <Compile Include="Serialization\IHasSharedObjects.cs" />
     <Compile Include="Suffixed\ScienceDataValue.cs" />
     <Compile Include="Suffixed\PartModuleField\ScienceExperimentFieldsFactory.cs" />
     <Compile Include="AddOns\OrbitalScience\DMModuleScienceAnimateFields.cs" />

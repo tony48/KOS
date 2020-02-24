@@ -4,12 +4,12 @@ DockingPort
 ===========
 
 Some of the Parts returned by :ref:`LIST PARTS <list command>` will be of type :struct:`DockingPort`.
+Such part can also be retrieved from :global:`TARGET`, if docking port is selected as target.
 
 .. note::
 
     .. versionadded:: 0.18
-        The spelling of suffixes `AQUIRERANGE`, `AQUIREFORCE`, and `AQUIRETORQURE` on the :struct:`DockingPort` structure has been corrected.  Please use `ACQUIRERANGE`, `ACQUIREFORCE`, and `ACQUIRETORQURE` instead.  Using the old incorrect spelling, a deprecation exception will be thrown, with instruction to use the new spelling.
-
+        The spelling of suffixes `AQUIRERANGE`, `AQUIREFORCE`, and `AQUIRETORQUE` on the :struct:`DockingPort` structure has been corrected.  Please use `ACQUIRERANGE`, `ACQUIREFORCE`, and `ACQUIRETORQURE` instead.  Using the old incorrect spelling, a deprecation exception will be thrown, with instruction to use the new spelling.
 
 .. structure:: DockingPort
 
@@ -21,9 +21,9 @@ Some of the Parts returned by :ref:`LIST PARTS <list command>` will be of type :
           - Type
           - Description
 
-        * - All suffixes of :struct:`Part`
+        * - All suffixes of :struct:`Decoupler`
           -
-          - A :struct:`DockingPort` is a kind of :struct:`Part`
+          - A :struct:`DockingPort` is a kind of :struct:`Decoupler` (which is :struct:`Part`)
 
         * - :attr:`ACQUIRERANGE`
           - scalar
@@ -55,13 +55,19 @@ Some of the Parts returned by :ref:`LIST PARTS <list command>` will be of type :
         * - :meth:`UNDOCK`
           -
           - callable to release the dock
+        * - :attr:`PARTNER`
+          - :struct:`DockingPort`
+          - the docking port this docking port is attached to, or "None" if no such port
+        * - :attr:`HASPARTNER`
+          - boolean
+          - whether or not this docking port is attached to another docking port
         * - :attr:`TARGETABLE`
           - boolean
           - check if this port can be targeted
 
 .. note::
 
-    :struct:`DockingPort` is a type of :struct:`Part`, and therefore can use all the suffixes of :struct:`Part`. Shown below are only the suffixes that are unique to :struct:`DockingPort`.
+    :struct:`DockingPort` is a type of :struct:`Decoupler`, and therefore can use all the suffixes of :struct:`Decoupler`. Shown below are only the suffixes that are unique to :struct:`DockingPort`.
 
 
 .. attribute:: DockingPort:ACQUIRERANGE
@@ -164,6 +170,25 @@ Some of the Parts returned by :ref:`LIST PARTS <list command>` will be of type :
 .. method:: DockingPort:UNDOCK
 
     Call this to cause the docking port to detach.
+
+.. attribute:: DockingPort:PARTNER
+
+    :type: :struct:`DockingPort`, or the :struct:`String` "None" if no such port.
+    :access: Get only
+
+    The docking port this docking port is attached to.
+    If this docking port is not actually attached to another port, attempting
+    to call this will return a String instead of a DockingPort, and that String
+    will have the value "None".  (Alternatively, you can test if this
+    docking port has a partner port attached by calling
+    :meth:`DockingPort:HASPARTER`.)
+
+.. attribute:: DockingPort:HASPARTNER
+
+    :type: :ref:`Boolean <boolean>`
+    :access: Get only
+
+    Whether or not this docking port is attached to another docking port.
 
 .. attribute:: DockingPort:TARGETABLE
 

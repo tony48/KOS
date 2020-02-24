@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace kOS.Screen
@@ -13,7 +13,7 @@ namespace kOS.Screen
     public abstract class KOSManagedWindow : MonoBehaviour
     {
         // The static values are for the way the windows keep track of each other:
-        
+
         // Give each instance of TermWindow a unique ID block to ensure it can create
         // Unity windows that don't clash:
         private static int termWindowIDRange = 215300; // I literally just mashed the keyboard to get a unique number.
@@ -43,11 +43,30 @@ namespace kOS.Screen
 
         private bool isOpen;
 
-        protected KOSManagedWindow()
+        private string lockIdName;
+
+        private bool optOutOfControlLocking;
+        /// <summary>
+        /// Fixes #2568 - If the window is one where Unity can handle doing the keyboard focus
+        /// properly itself, like a Unity IMGUI window, then it should set this to true so it
+        /// will avoid using KSP's more high level control locking scheme whcih is a bit flaky at times:
+        /// </summary>
+        public bool OptOutOfControlLocking
+        {
+            get { return optOutOfControlLocking; }
+            set { if (value) InputLockManager.RemoveControlLock(lockIdName); optOutOfControlLocking = value; }
+        }
+
+        protected KOSManagedWindow(string lockIdName = "")
         {
             // multiply by 50 so there's a range for future expansion for other GUI objects inside the window:
             uniqueId = termWindowIDRange + (windowsMadeSoFar * 50);
-            ++windowsMadeSoFar;            
+            ++windowsMadeSoFar;
+            // When the lockIdName is not given, then manufacture a unique one:
+            if (lockIdName.Length == 0)
+                this.lockIdName = "KOSManagedWindow ID:" + uniqueId;
+            else
+                this.lockIdName = lockIdName;
         }
 
         public bool IsPowered { get; set; }
@@ -130,14 +149,31 @@ namespace kOS.Screen
 
 
         /// <summary>
-        /// Implement this for how to make your widget get the keyboard focus:
+        /// Implement this for how to make your widget get the keyboard focus.
+        /// It is VITAL that if you override this method in a derived class,
+        /// that you also call this base version in that overridden method.  Otherwise
+        /// you will get the map view spinning bug when the focus is in this window.
         /// </summary>
-        public abstract void GetFocus();
+        public virtual void GetFocus()
+        {
+            if (OptOutOfControlLocking)
+                return;
+            if (HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneHasPlanetarium)
+                InputLockManager.SetControlLock(ControlTypes.ALLBUTCAMERAS, lockIdName);
+        }
 
         /// <summary>
         /// Implement this for how to make your widget give up the keyboard focus:
+        /// It is VITAL that if you override this method in a derived class,
+        /// that you also call this base version in that overridden method.  Otherwise
+        /// you will get the map view spinning bug when the focus is in this window.
         /// </summary>
-        public abstract void LoseFocus();
+        public virtual void LoseFocus()
+        {
+            if (OptOutOfControlLocking)
+                return;
+            InputLockManager.RemoveControlLock(lockIdName);
+        }
         
         /// <summary>
         /// Implement this to make the window appear when it wasn't there before.

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Collections.Generic;
 using kOS.AddOns.RemoteTech;
@@ -54,7 +54,7 @@ namespace kOS.Suffixed
 
         public Vessel Vessel { get; private set; }
 
-        public override bool SetSuffix(string suffixName, object value)
+        public override bool SetSuffix(string suffixName, object value, bool failOkay = false)
         {
             float floatValue = 0;
             Vector vectorValue = null;
@@ -386,6 +386,11 @@ namespace kOS.Suffixed
         SharedObjects IFlightControlParameter.GetShared()
         {
             return null;
+        }
+
+        Vessel IFlightControlParameter.GetResponsibleVessel()
+        {
+            return Vessel;
         }
 
         void IFlightControlParameter.UpdateAutopilot(FlightCtrlState c)

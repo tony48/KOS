@@ -24,6 +24,8 @@ SHIP:
   CPU part that is running this Kerboscript code at the moment. This is
   the `CPU Vessel <general/cpu_vessel.html>`__.
 
+.. _target:
+
 TARGET:
 
 - **Variable Name**: TARGET
@@ -270,7 +272,7 @@ Variable Name                   Can Read     Can Set     Source    What it manag
 :global:`LEGS`                  yes          yes          kOS       The extended state of all landing legs
 :global:`CHUTES`                yes          yes          kOS       The armed state of all parachutes
 :global:`CHUTESSAFE`            yes          yes          kOS       The armed state of all "safe" parachutes
-:global:`PANELS`                yes          yes          kOS       The deployed state of solar panels
+:global:`PANELS`                yes          yes          kOS       The state of retractable solar panels
 :global:`RADIATORS`             yes          yes          kOS       The deployed state of radiators
 :global:`LADDERS`               yes          yes          kOS       The extended state of ladders
 :global:`BAYS`                  yes          yes          kOS       The opened state of payload/service bays

@@ -1,4 +1,4 @@
-﻿using kOS.Safe;
+using kOS.Safe;
 using kOS.Safe.Encapsulation;
 using kOS.Safe.Encapsulation.Suffixes;
 using kOS.Safe.Execution;
@@ -18,6 +18,8 @@ namespace kOS.Suffixed
         public Vector3d Start { get; set; }
         public double Scale { get; set; }
         public double Width { get; set; }
+        public bool Pointy { get; set; }
+        public bool Wiping { get; set; }
 
         private LineRenderer line;
         private LineRenderer hat;
@@ -28,7 +30,13 @@ namespace kOS.Suffixed
         private GameObject lineObj;
         private GameObject hatObj;
         private GameObject labelObj;
+        // Deliberately not fixing the following deprecation warning for using GUIText, because I want this
+        // codebase to be back-portable to older KSP versions for RO/RP-1 without too much hassle.  Eventually
+        // it might not work and we may be forced to change this, but the KSP1 lifecycle may be done
+        // by then, so I don't want to make the effort prematurely.
+#pragma warning disable CS0618 // ^^^ see above comment about why this is disabled.
         private GUIText label;
+#pragma warning restore CS0618
         private string labelStr = "";
         private Vector3 labelLocation;
 
@@ -65,6 +73,8 @@ namespace kOS.Suffixed
             Start = new Vector3d(0, 0, 0);
             Scale = 1.0;
             Width = 0;
+            Pointy = false;
+            Wiping = false;
 
             updateHandler = updateHand;
             this.shared = shared;
@@ -260,6 +270,9 @@ namespace kOS.Suffixed
                 Width = value;
                 RenderPointCoords();
             }));
+
+            AddSuffix("POINTY", new SetSuffix<BooleanValue>(() => Pointy, value => Pointy = value));
+            AddSuffix("WIPING", new SetSuffix<BooleanValue>(() => Wiping, value => Wiping = value));
         }
 
         /// <summary>
@@ -340,16 +353,32 @@ namespace kOS.Suffixed
 
                     line = lineObj.AddComponent<LineRenderer>();
                     hat = hatObj.AddComponent<LineRenderer>();
-                    //TODO: 1.1 TODO
+                    // Deliberately not fixing the following deprecation warning for using GUIText, because I want this
+                    // codebase to be back-portable to older KSP versions for RO/RP-1 without too much hassle.  Eventually
+                    // it might not work and we may be forced to change this, but the KSP1 lifecycle may be done
+                    // by then, so I don't want to make the effort prematurely.
+#pragma warning disable CS0618 // ^^^ see above comment about why this is disabled.
                     label = labelObj.GetComponent<GUIText>();
+#pragma warning restore CS0618
 
                     line.useWorldSpace = false;
                     hat.useWorldSpace = false;
 
                     GetShipCenterCoords();
 
-                    line.material = new Material(Shader.Find("Particles/Additive"));
-                    hat.material = new Material(Shader.Find("Particles/Additive"));
+                    // Note the Shader name string below comes from Kerbal's packaged shaders the
+                    // game ships with - there's many to choose from but they're not documented what
+                    // they are.  This was settled upon via trial and error:
+                    // Additionally, Note that in KSP 1.8 because of the Unity update, some of these
+                    // shaders Unity previously supplied were removed from Unity's DLLs.  SQUAD packaged them
+                    // inside its own DLLs in 1.8 for modders who had been using them.  But because of that,
+                    // mods have to use this different path to get to them:
+                    Shader vecShader = Shader.Find("Particles/Alpha Blended"); // for when KSP version is < 1.8
+                    if (vecShader == null)
+                        vecShader = Shader.Find("Legacy Shaders/Particles/Alpha Blended"); // for when KSP version is >= 1.8
+
+                    line.material = new Material(vecShader);
+                    hat.material = new Material(vecShader);
 
                     // This is how font loading would work if other fonts were available in KSP:
                     // Font lblFont = (Font)Resources.Load( "Arial", typeof(Font) );
@@ -364,7 +393,7 @@ namespace kOS.Suffixed
                 }
                 updateHandler.AddObserver(this);
                 line.enabled = true;
-                hat.enabled = true;
+                hat.enabled = Pointy;
                 label.enabled = true;
             }
             else
@@ -435,6 +464,9 @@ namespace kOS.Suffixed
                     mapWidthMult = Math.Max(camLookVec.magnitude, 100.0f) / 100.0f;
                 }
 
+                // From point1 to point3 is the vector.
+                // point2 is the spot just short of point3 to start drawing
+                // the pointy hat, if Pointy is enabled:
                 Vector3d point1 = mapLengthMult * Start;
                 Vector3d point2 = mapLengthMult * (Start + (Scale * 0.95 * Vector));
                 Vector3d point3 = mapLengthMult * (Start + (Scale * Vector));
@@ -448,9 +480,9 @@ namespace kOS.Suffixed
                 line.startWidth = useWidth;
                 line.endWidth = useWidth;
                 line.SetPosition(0, point1);
-                line.SetPosition(1, point2);
+                line.SetPosition(1, Pointy ? point2 : point3 );
 
-                // Position the arrow hat:
+                // Position the arrow hat.  Note, if Pointy = false, this will be invisible.
                 hat.positionCount = 2;
                 hat.startWidth = useWidth * 3.5f;
                 hat.endWidth = 0.0f;
@@ -477,8 +509,9 @@ namespace kOS.Suffixed
 
             if (line != null && hat != null)
             {
-                // The line has the fade effect from color c1 to color c2:
-                line.startColor = c1; 
+                // If Wiping, then the line has the fade effect from color c1 to color c2,
+                // else it stays at c2 the whole way:
+                line.startColor = (Wiping ? c1 : c2); 
                 line.endColor = c2;
                 // The hat does not have the fade effect, staying at color c2 the whole way:
                 hat.startColor = c2;

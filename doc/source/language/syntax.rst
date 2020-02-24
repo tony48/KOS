@@ -95,8 +95,10 @@ The rest may be letters, digits or underscores.
     the kOS developers cannot test every language and verify if
     this is correct or not.
 
-**Suffixes**
-    Some variable types are structures that contain sub-portions. The separator between the main variable and the item inside it is a colon character (``:``). When this symbol is used, the part on the right-hand side of the colon is called the "suffix"::
+Suffixes
+--------
+
+Some variable types are structures that contain sub-portions. The separator between the main variable and the item inside it is a colon character (``:``). When this symbol is used, the part on the right-hand side of the colon is called the "suffix"::
 
         list parts in mylist.
         print mylist:length. // length is a suffix of mylist
@@ -219,14 +221,26 @@ Some suffixes are actually functions you can call. When that is the case, these 
     x:remove(0).
     x:clear().
 
+Suffixes as Lexicon keys
+------------------------
+
+The special type called a :struct:`Lexicon` can be used with this suffix syntax as
+an alternate way to get the value for a key, as in the example below::
+
+    // Given this setup...
+    set MyLex to Lexicon().
+    MyLex:ADD( "key1", "value1").
+    // ...these two lines have the same effect:
+    print MyLex["key1"]. // key used in the usual way as an "index".
+    print MyLex:key1.    // key used in an alternate way as a "suffix".
+
+There are some limits to using this syntax, as described in more detail
+:ref:`in the documentation for the Lexion type <lexicon_suffix>`.
+
 .. _syntax functions:
 
 User Functions
 --------------
-
-.. note::
-    .. versionadded:: 0.17
-        This feature did not exist in prior versions of kerboscript.
 
 Help for the new user - What is a Function?
     In programming terminology, there is a commonly used feature of

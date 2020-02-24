@@ -3,16 +3,15 @@
 Body
 ====
 
+.. function:: BODY(name)
+
 This is any sort of planet or moon. To get a variable referring to a Body, you can do this::
 
     // "name" is the name of the body,
     // like "Mun" for example.
     SET MY_VAR TO BODY("name").
 
-.. note::
-    .. versionchanged:: 0.13
-        A Celestial Body is now also an :ref:`Orbitable <orbitable>`, and can use all the terms described for these objects too.
-
+Bodies are also :ref:`Orbitable<orbitable>`, and as such have all the associated suffixes.
 
 Bodies' names are added to the kerboscript language as variable names as well.
 This means you can use the variable ``Mun`` to mean the same thing as ``BODY("Mun")``,
@@ -31,6 +30,15 @@ and the variable ``Kerbin`` to mean the same thing as ``BODY("Kerbin")``, and so
         This behavior was only added in kOS 1.0.2.
         Using a version of kOS prior to 1.0.2 will cause a name clash and
         broken behavior if a planet or moon exists that overrides a keyword name.
+
+.. function:: BODYEXISTS(name)
+
+To check whether a Body exists, you can use this boolean function::
+
+    SET MUN_EXISTS TO BODYEXISTS("Mun").
+    IF MUN_EXISTS PRINT "Mun Exists." ELSE PRINT "Mun does not exist.".
+
+
 
 Predefined Celestial Bodies
 ---------------------------
@@ -67,6 +75,9 @@ All of the main celestial bodies in the game are reserved variable names. The fo
     :attr:`NAME`                     :ref:`string <string>`
     :attr:`DESCRIPTION`              :ref:`string <string>`
     :attr:`MASS`                     :ref:`scalar <scalar>` (kg)
+    :attr:`HASOCEAN`                 :ref:`boolean <boolean>`
+    :attr:`HASSOLIDSURFACE`          :ref:`boolean <boolean>`
+    :attr:`ORBITINGCHILDREN`         :struct:`List`
     :attr:`ALTITUDE`                 :ref:`scalar <scalar>` (m)
     :attr:`ROTATIONPERIOD`           :ref:`scalar <scalar>` (s)
     :attr:`RADIUS`                   :ref:`scalar <scalar>` (m)
@@ -96,13 +107,31 @@ All of the main celestial bodies in the game are reserved variable names. The fo
 
     The mass of the body in kilograms.
 
+.. attribute:: Body:HASOCEAN
+
+    True if this body has an ocean.  Example: In the stock solar system,
+    this is True for Kerbin and False for Mun.
+
+.. attribute:: Body:HASSOLIDSURFACE
+
+    True if this body has a solid surface.  Example: In the stock solar system,
+    this is True for Kerbin and False for Jool.
+
+.. attribute:: Body:ORBITINGCHILDREN
+
+    A list of the bodies orbiting this body.  Example: In the stock solar system,
+    Kerbin:orbitingchildren is a list two things: Mun and Minmus.
+
 .. attribute:: Body:ALTITUDE
 
     The altitude of this body above the sea level surface of its parent body. I.e. the altitude of Mun above Kerbin.
 
 .. attribute:: Body:ROTATIONPERIOD
 
-    The length of the body's day in seconds. I.e. how long it takes for it to make one rotation.
+    The number of seconds it takes the body to rotate around its own axis.
+    This is the sedereal rotation period which can differ from the length
+    of a day due to the fact that the body moves a bit further around the
+    Sun while it's rotating around its own axis.
 
 .. attribute:: Body:RADIUS
 
@@ -121,7 +150,7 @@ All of the main celestial bodies in the game are reserved variable names. The fo
 .. attribute:: Body:ANGULARVEL
 
     Angular velocity of the body's rotation about its axis (its
-    day) expressed as a vector.
+    sidereal day) expressed as a vector.
 
     The direction the angular velocity points is in Ship-Raw orientation,
     and represents the axis of rotation.  Remember that everything in
@@ -131,7 +160,7 @@ All of the main celestial bodies in the game are reserved variable names. The fo
     and stick out your thumb, the thumb's direction is the way the
     angular velocity vector will point.
 
-    The magnitude of the vector is the speed of the rotation.
+    The magnitude of the vector is the speed of the rotation, *in radians*.
 
     Note, unlike many of the other parts of kOS, the rotation speed is
     expressed in radians rather than degrees.  This is to make it
@@ -176,5 +205,6 @@ All of the main celestial bodies in the game are reserved variable names. The fo
     current positon of the body's prime meridian (body longitude
     of zero).
 
-    The value is in constant motion, and once per body's day, its
-    ``:rotationangle`` will wrap around through a full 360 degrees.
+    The value is in constant motion, and once per body's rotation
+    period ("sidereal day"), its ``:rotationangle`` will wrap
+    around through a full 360 degrees.
